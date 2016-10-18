@@ -19,7 +19,7 @@ for (var i = 0, max = Math.min(pageCnt, config['max_threads'] - 1); i < max; i++
 var currIdx = config['max_threads'] - 1;
 var throttle = setInterval(function () {
   if (currIdx >= pageCnt && window.counters.rendering === 0) {
-    console.log('Total pages: '+pageCnt+' ('+(window.counters.pageCnt-window.counters.failed)+' rendered, '+window.counters.failed+' failed)');
+    console.log('Total pages: '+pageCnt+' ('+(pageCnt-window.counters.failed)+' rendered, '+window.counters.failed+' failed)');
     console.log('All tasks complete. Program terminated...');
     phantom.exit();
   } else if (currIdx < pageCnt && window.counters.rendering <= config['max_threads']) {
