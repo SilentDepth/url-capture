@@ -1,5 +1,5 @@
 {
-  "url_file": "data/data.txt",
+  "url_file": "urls.txt",
   "has_title_row": true,
   "max_threads": 10,
   "max_render_time": 10000,
