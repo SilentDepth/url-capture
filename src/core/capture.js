@@ -1,4 +1,5 @@
 var webpage = require('webpage');
+var format = require('../../lib/string-template');
 var config = require('../../config.json');
 var normalize = require('../util/url-normalize');
 
@@ -23,8 +24,7 @@ module.exports = function (data) {
   };
   phantomPage.onResourceError = function (err) {
     if (err.id === 2) {
-      console.error(err.url + ' ' + err.status + ' ' + err.statusText);
-      promiseHandlers['open_target_url'].reject(err.status);
+      promiseHandlers['open_target_url'].reject(err);
     }
   };
   phantomPage.onConsoleMessage = function (msg) {
@@ -32,6 +32,7 @@ module.exports = function (data) {
       promiseHandlers['open_target_url'].resolve();
     }
   };
+  // suppress in-page resource errors
   phantomPage.onError = function () {};
 
   /* Execution */
@@ -62,7 +63,7 @@ module.exports = function (data) {
   }).catch(function (reason) {
     // Timeout-catch
     if (reason === 'timeout') {
-      console.log('Timeout');
+      console.log(format('Timeout on {0} ({1})', data.siteId, data.url));
     } else {
       return Promise.reject(reason);
     }
@@ -85,9 +86,9 @@ module.exports = function (data) {
       stamp(data);
     }, stampData);
     phantomPage.render('screenshots/' + data.siteId + (data.type ? '_' + data.type : '') + '.png');
-  }).catch(function (reason) {
+  }).catch(function (err) {
     // Fail-catch
-    console.log('Fail: ' + reason);
+    console.error(format('Failed to load {0} ({1}): {2} {3}', data.siteId, data.url, err.status, err.statusText));
     window.counters.failed++;
   }).then(function () {
     // Close
