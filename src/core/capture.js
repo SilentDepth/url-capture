@@ -1,6 +1,6 @@
 var webpage = require('webpage');
 var format = require('../../lib/string-template');
-var config = require('../../config.json');
+var config = require('../../config');
 var normalize = require('../util/url-normalize');
 
 // ES6 Promise polyfill
