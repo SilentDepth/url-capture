@@ -1,3 +1,5 @@
+_中文版见[README.chs.md](https://github.com/SilentDepth/url-capture/blob/master/README.chs.md)_
+
 # URL Capture
 
 Capture screenshots for URLs using [PhantomJS](http://phantomjs.org/).
