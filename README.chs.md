@@ -18,5 +18,4 @@ _还没写好……_
 
 ## 有问题？
 
-I made this tool as a PhantomJS practice and I didn't test it seriously. If you find anything wrong, issues or pull requests are appreciated.
 我在学习PhantomJS时做了这个工具，并没有做严谨的测试。如果你发现哪里有问题，欢迎提Issue或PR。
