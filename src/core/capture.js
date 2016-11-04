@@ -1,98 +1,114 @@
+'use strict';
+
 var webpage = require('webpage');
-var format = require('../../lib/string-template');
-var config = require('../../config');
-var normalize = require('../util/url-normalize');
 
-// ES6 Promise polyfill
-var Promise = require('../../lib/es6-promise.min.js').Promise;
+var Promise = require('../../lib/es6-promise.min').Promise;
 
-module.exports = function (data) {
+var filenameNormalize = require('../util/filename-normalize');
+
+module.exports = function (urlItem) {
   var phantomPage = webpage.create();
   var livingReqCnt = 0;
   var promiseHandlers = {};
+  var resolveDelay;
+  var isScrolled = false;
 
-  phantomPage.viewportSize = data.type === 'mobile'
-    ? config['viewport_size_mobile']
-    : config['viewport_size_desktop'];
+  function scrollPage() {
+    var vpHeight = window.innerHeight;
+    var docHeight = document.body.scrollHeight;
+    if (document.body.scrollTop + vpHeight < docHeight) {
+      document.body.scrollTop += vpHeight;
+      return false;
+    } else {
+      document.body.scrollTop = docHeight;
+      return true;
+    }
+  }
+
+  function tryResolve() {
+    if (isScrolled && !livingReqCnt) {
+      resolveDelay = setTimeout(function () {
+        console.debug('try hit with reqs ' + livingReqCnt);
+        promiseHandlers.scrolled.resolve();
+      }, 500);
+    }
+  }
+
+  // TODO: Custom viewport size
+  phantomPage.viewportSize = {width: 1600, height: 1000};
+
   phantomPage.onResourceRequested = function () {
+    clearTimeout(resolveDelay);
     livingReqCnt++;
   };
   phantomPage.onResourceReceived = function (res) {
     if (!res.stage || res.stage === 'end') {
       livingReqCnt--;
+      tryResolve();
     }
   };
-  phantomPage.onResourceError = function (err) {
-    if (err.id === 2) {
-      promiseHandlers['open_target_url'].reject(err);
-    }
-  };
-  phantomPage.onConsoleMessage = function (msg) {
-    if (msg === 'phantomjs < loaded') {
-      promiseHandlers['open_target_url'].resolve();
-    }
-  };
-  // suppress in-page resource errors
+  // Suppress in-page error (which might print much log)
+  // 屏蔽页面内错误（减少不必要的日志输出）
   phantomPage.onError = function () {};
 
-  /* Execution */
+  return Promise.race([
+    // Timeout control
+    // 超时控制
+    new Promise(function (resolve, reject) {
+      // TODO: replace magic number
+      setTimeout(reject, 5000, 'timeout');
+    }),
+    // Normally open the URL
+    // 正常打开URL
+    new Promise(function (resolve, reject) {
+      phantomPage.open(urlItem.url, function (status) {
+        if (status === 'success') {
+          resolve();
+        } else {
+          reject('failed');
+        }
+      });
+    }).then(function () {
+      /* Scroll */
 
-  new Promise(function (resolve) {
-    // Start
-    window.counters.rendering++;
-    phantomPage.open('static/html/main.html', function () {
-      resolve();
-    });
-  }).then(function () {
-    // Open & Timeout
-    return Promise.race([
-      new Promise(function (resolve, reject) {
-        promiseHandlers['open_target_url'] = {
-          resolve: resolve,
-          reject: reject
-        };
-        phantomPage.switchToChildFrame('page');
-        phantomPage.evaluate(function (url) {
-          location.href = url;
-        }, normalize(data.url));
-      }),
-      new Promise(function (resolve, reject) {
-        setTimeout(reject, config['max_render_time'], 'timeout');
-      })
-    ]);
-  }).catch(function (reason) {
-    // Timeout-catch
+      return new Promise(function (resolve) {
+        promiseHandlers.scrolled = {resolve: resolve};
+        var int = setInterval(function () {
+          if (isScrolled) {
+            clearInterval(int);
+            tryResolve();
+          } else {
+            isScrolled = phantomPage.evaluate(scrollPage);
+          }
+        }, 200);
+      });
+    })
+  ]).catch(function (reason) {
     if (reason === 'timeout') {
-      console.log(format('Timeout on {0} ({1})', data.siteId, data.url));
+      if (!__capture_args__.silent) {
+        console.warn('Loading ' + urlItem.url + ' timeout.');
+      }
     } else {
-      return Promise.reject(reason);
+      return Promise.reject();
     }
   }).then(function () {
-    // Stamp & Render
-    console.log('Living requests: ' + livingReqCnt);
+    /* Render */
 
-    phantomPage.stop();
-    phantomPage.switchToChildFrame('page');
-    var stampData = phantomPage.evaluate(function () {
-      return {
-        pageTitle: document.title,
-        pageUrl: location.href
-      };
-    });
-    phantomPage.switchToMainFrame();
-    stampData.siteId = data.siteId;
-    stampData.siteUrl = data.url;
-    phantomPage.evaluate(function (data) {
-      stamp(data);
-    }, stampData);
-    phantomPage.render('screenshots/' + data.siteId + (data.type ? '_' + data.type : '') + '.png');
-  }).catch(function (err) {
-    // Fail-catch
-    console.error(format('Failed to load {0} ({1}): {2} {3}', data.siteId, data.url, err.status, err.statusText));
-    window.counters.failed++;
-  }).then(function () {
-    // Close
-    phantomPage.close();
-    window.counters.rendering--;
+    console.debug('rendering');
+    if (__capture_args__.urls.length === 1) {
+      phantomPage.render(
+        __capture_args__.output
+          ? __capture_args__.output
+          : './screenshots/' + filenameNormalize(urlItem.url) + '.png'
+      );
+    } else {
+      phantomPage.render(
+        (__capture_args__.output ? __capture_args__.output : './screenshots')
+        + '/' + filenameNormalize(urlItem.url) + '.png'
+      )
+    }
+  }).catch(function () {
+    // TODO: failure log
+    console.warn('failed');
   });
 };

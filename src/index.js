@@ -6,7 +6,7 @@ var Promise = require('../lib/es6-promise.min').Promise;
 
 var parseArgs = require('./util/arguments');
 var URLItem = require('./core/url-item');
-var capture = require('./core/capture');
+var capture = require('./core/capture.js');
 
 /* Global vars */
 /* 全局变量 */
@@ -39,7 +39,7 @@ if (!__capture_args__.output) {
   if (!__capture_args__.silent) {
     console.warn('No output set. Use ./screenshots by default.');
   }
-  __capture_args__.output = './screenshots';
+  // __capture_args__.output = './screenshots';
 }
 
 /* Get URLs */
@@ -66,12 +66,12 @@ function run() {
   // TODO: remove magic number
   if (__capture_count__ < 10 && __capture_idx__ < urlList.length) {
     __capture_count__++;
-    capture(new URLItem(urlList[__capture_idx__])).then(function () {
+    capture(new URLItem(urlList[__capture_idx__++])).then(function () {
       __capture_count__--;
       run();
     });
     run();
-  } else if (__capture_idx__ === urlList.length) {
+  } else if (!__capture_count__ && __capture_idx__ === urlList.length) {
     if (!__capture_args__.silent) {
       console.log('All tasks finished. Program terminated...');
     }
