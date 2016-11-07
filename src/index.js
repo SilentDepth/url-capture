@@ -2,14 +2,16 @@
 
 var args = require('system').args;
 
-var Promise = require('../lib/es6-promise.min').Promise;
-
 var parseArgs = require('./util/arguments');
 var URLItem = require('./core/url-item');
 var capture = require('./core/capture.js');
 
 /* Global vars */
 /* 全局变量 */
+
+// Program start time
+// 程序启动时间
+window.__capture_start__ = Date.now();
 
 // system.args in object-style
 // 对象化的命令行参数

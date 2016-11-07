@@ -4,7 +4,8 @@ var ARG_MAP = {
   '-f': 'file',
   '-u': 'urls',
   '-o': 'output',
-  '-s': 'silent'
+  '-s': 'silent',
+  '-v': 'verbose'
 };
 
 /**
@@ -20,6 +21,8 @@ module.exports = function (args) {
   var argType;
 
   args.forEach(function (arg, idx) {
+    // Skip the script file
+    // 忽略脚本文件参数
     if (idx === 0) return;
 
     if (ARG_MAP[arg]) {
@@ -27,6 +30,12 @@ module.exports = function (args) {
       switch (argType) {
         case 'silent':
           argObject.silent = true;
+          argObject.verbose = false;
+          argType = null;
+          return;
+        case 'verbose':
+          argObject.verbose = true;
+          argObject.silent = false;
           argType = null;
           return;
         case 'urls':

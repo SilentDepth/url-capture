@@ -28,7 +28,9 @@ module.exports = function (urlItem) {
   function tryResolve() {
     if (isScrolled && !livingReqCnt) {
       resolveDelay = setTimeout(function () {
-        console.debug('try hit with reqs ' + livingReqCnt);
+        if (__capture_args__.verbose) {
+          urlItem.log('Try hit. Living requests: ' + livingReqCnt + '.');
+        }
         promiseHandlers.scrolled.resolve();
       }, 500);
     }
@@ -69,13 +71,20 @@ module.exports = function (urlItem) {
         }
       });
     }).then(function () {
-      /* Scroll */
+      /* Scroll phase */
+      /* 滚动阶段 */
 
+      if (__capture_args__.verbose) {
+        urlItem.log('Scrolling.');
+      }
       return new Promise(function (resolve) {
         promiseHandlers.scrolled = {resolve: resolve};
         var int = setInterval(function () {
           if (isScrolled) {
             clearInterval(int);
+            if (__capture_args__.verbose) {
+              urlItem.log('Scrolling finished.');
+            }
             tryResolve();
           } else {
             isScrolled = phantomPage.evaluate(scrollPage);
@@ -86,15 +95,20 @@ module.exports = function (urlItem) {
   ]).catch(function (reason) {
     if (reason === 'timeout') {
       if (!__capture_args__.silent) {
-        console.warn('Loading ' + urlItem.url + ' timeout.');
+        urlItem.log('Loading timeout.');
       }
     } else {
+      // TODO: more detail
       return Promise.reject();
     }
   }).then(function () {
-    /* Render */
+    /* Render phase */
+    /* 截图阶段 */
 
-    console.debug('rendering');
+    if (__capture_args__.verbose) {
+      urlItem.log('Rendering.');
+    }
+    // TODO: need simplify
     if (__capture_args__.urls.length === 1) {
       phantomPage.render(
         __capture_args__.output
@@ -107,8 +121,13 @@ module.exports = function (urlItem) {
         + '/' + filenameNormalize(urlItem.url) + '.png'
       )
     }
+
+    if (__capture_args__.verbose) {
+      urlItem.log('Rendering finished.');
+    }
   }).catch(function () {
-    // TODO: failure log
-    console.warn('failed');
+    if (!__capture_args__.silent) {
+      urlItem.log('Loading failed.');
+    }
   });
 };
